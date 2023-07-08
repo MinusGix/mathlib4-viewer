@@ -1,11 +1,12 @@
 # MathLib4 Viewer
 This is a viewer for MathLib 4 that tries to improve on some aspects.
 
-## Architecture
+## Reason
 The original [mathlib docs](https://leanprover-community.github.io/mathlib4_docs/) are hosted on github.io which hosts static sites (basically). This means their search functionality is limited in how it can be implemented, and it has to download the data on the client side.  
-The current implementation compresses the ~74M JSON pretty well (to ~7.4M) and it caches it in the browser's indexedDB. However, this is still slow to search through on any browser I've used and makes the site feel sluggish.  
+The current implementation on the official website compresses the ~74M JSON pretty well (to ~7.4M) and it caches it in the browser's indexedDB. However, this is still slow to search through on any browser I've used and makes the site feel sluggish whenever it loads or it is searching.
 
-So, this architecture has a server (written in Rust, it could be written in Lean 4 but I don't really use Lean 4 for normal programming) that can process the search requests itself and thus provide responses faster.
+
+This viewer has a server written in Rust that loads the data itself and provides api endpoints to request information from. The downloaded docs have their JavaScript swapped out so that they make requests and don't load the large data on the web browser. This makes searches essentially instant (when running on localhost), relative to the potentially multi-second delay on the official site.
 
 ## Data
 The docs are downloaded from https://github.com/leanprover-community/mathlib4_docs which are prebuilt docs, the same as what you see on the official community website.  
@@ -37,4 +38,3 @@ It might be possible to modify the mathlib doc generation to put it into a more 
     - Could do some manual downplaying of rarely relevant results, like impl details of Real and stuff.
 - Host this somewhere? Might be able to get by with a pretty cheap host? Especially if we do some smarter stuff?
 - Replace 'how about'? I don't know where this is even used.
-- Replace instances.js?
