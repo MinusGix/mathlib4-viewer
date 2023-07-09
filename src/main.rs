@@ -22,6 +22,7 @@ const MATHLIB4_DOCS_URL: &str =
 const DECLARATION_DATA_MODIFIED: &str = include_str!("../dist/declaration-data.js");
 const SEARCH_MODIFIED: &str = include_str!("../dist/search.js");
 const INSTANCES_MODIFIED: &str = include_str!("../dist/instances.js");
+const IMPORTED_BY_MODIFIED: &str = include_str!("../dist/importedBy.js");
 
 ///
 #[derive(Debug, Parser)]
@@ -157,6 +158,7 @@ async fn main() {
             .route("/module_name_to_link", post(module_name_to_link))
             .route("/annotate_instances", post(annotate_instances))
             .route("/annotate_instances_for", post(annotate_instances_for))
+            .route("/linked_imported_by", post(linked_imported_by))
             .with_state(state)
             .nest_service("/", ServeDir::new(&docs_dir));
 
@@ -170,6 +172,9 @@ async fn main() {
 }
 
 async fn download_mathlib_docs(state: &DataState) {
+    // TODO: We may need to delete the old files first.
+    // TODO: We could remark which files have changed if we're updating.
+
     let dest = tempfile::Builder::new().prefix("m4doc").tempdir().unwrap();
 
     let fname = "mathlib_docs.zip";
@@ -224,6 +229,7 @@ fn copy_modified_files(state: &DataState) {
         ("declaration-data.js", DECLARATION_DATA_MODIFIED),
         ("search.js", SEARCH_MODIFIED),
         ("instances.js", INSTANCES_MODIFIED),
+        ("importedBy.js", IMPORTED_BY_MODIFIED),
     ];
 
     for (filename, content) in MODIFIED {
@@ -332,7 +338,7 @@ struct AnnotateInstancesInfo {
 }
 
 #[derive(Debug, Serialize)]
-struct InstanceLink {
+struct LinkInfo {
     name: String,
     link: String,
 }
@@ -354,7 +360,7 @@ fn get_annotate_instances(
                     .map(|d| d.doc_link.clone())
                     .unwrap_or_default();
 
-                InstanceLink { name: inst, link }
+                LinkInfo { name: inst, link }
             });
             instances.push(insts.collect());
         } else {
@@ -377,4 +383,25 @@ async fn annotate_instances_for(
     Json(ann): Json<AnnotateInstancesInfo>,
 ) -> String {
     get_annotate_instances(&state, &ann, &state.decl_data.instances_for)
+}
+
+async fn linked_imported_by(
+    State(state): State<DataState>,
+    Json(module_name): Json<String>,
+) -> String {
+    if let Some(v) = state.decl_data.imported_by.get(module_name.as_str()) {
+        let v = v.iter().cloned().map(|name| {
+            let link = state
+                .decl_data
+                .modules
+                .get(name.as_str())
+                .map(|d| d.clone())
+                .unwrap_or_default();
+
+            LinkInfo { name, link }
+        });
+        serde_json::to_string(&v.collect::<Vec<_>>()).unwrap()
+    } else {
+        "[]".to_owned()
+    }
 }

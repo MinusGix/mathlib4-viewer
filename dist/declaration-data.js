@@ -180,4 +180,8 @@ export class DeclarationDataCenter {
 
         return await req("/module_name_to_link", moduleName, "");
     }
+
+    async linkedImportedBy(moduleName) {
+        return await req("/linked_imported_by", moduleName, []);
+    }
 }
